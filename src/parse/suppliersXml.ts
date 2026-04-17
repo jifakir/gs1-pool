@@ -20,6 +20,17 @@ function toNumber(value: unknown): number | undefined {
   return undefined;
 }
 
+/** Match XML tag names case-insensitively (GS1 returns e.g. `<GLN>` not `<gln>`). */
+function getFieldCI(obj: Record<string, unknown>, localName: string): unknown {
+  const want = localName.toLowerCase();
+  for (const [k, v] of Object.entries(obj)) {
+    if (stripNs(k).toLowerCase() === want) {
+      return v;
+    }
+  }
+  return undefined;
+}
+
 function walkForSupplierLikeObjects(node: unknown, out: Record<string, unknown>[]): void {
   if (node === null || node === undefined) return;
   if (Array.isArray(node)) {
@@ -30,7 +41,7 @@ function walkForSupplierLikeObjects(node: unknown, out: Record<string, unknown>[
   if (!obj) return;
 
   const keys = Object.keys(obj).map(stripNs);
-  const hasGlnKey = keys.includes('gln');
+  const hasGlnKey = keys.some((k) => k.toLowerCase() === 'gln');
 
   if (hasGlnKey) {
     out.push(obj);
@@ -42,6 +53,10 @@ function walkForSupplierLikeObjects(node: unknown, out: Record<string, unknown>[
   }
 }
 
+/**
+ * Parse Datalink `GET /suppliers` XML, e.g.:
+ * `<rows><row><GLN>…</GLN><targetMarketCountryCode>…</targetMarketCountryCode><itemCount>0</itemCount></row></rows>`
+ */
 export function parseSuppliersXml(xml: string): SupplierRow[] {
   const parser = createXmlParser();
   const parsed = parser.parse(xml) as unknown;
@@ -50,9 +65,8 @@ export function parseSuppliersXml(xml: string): SupplierRow[] {
 
   const rows: SupplierRow[] = [];
   for (const c of candidates) {
-    const glnRaw = c.gln ?? Object.entries(c).find(([k]) => stripNs(k) === 'gln')?.[1];
-    const itemCountRaw =
-      c.itemCount ?? Object.entries(c).find(([k]) => stripNs(k) === 'itemCount')?.[1];
+    const glnRaw = getFieldCI(c, 'gln');
+    const itemCountRaw = getFieldCI(c, 'itemCount');
 
     const gln = typeof glnRaw === 'string' ? glnRaw : typeof glnRaw === 'number' ? String(glnRaw) : undefined;
     if (!gln) continue;

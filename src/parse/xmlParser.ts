@@ -11,6 +11,7 @@ export function createXmlParser(): XMLParser {
     isArray: (tagName) => {
       const name = tagName.includes(':') ? tagName.slice(tagName.indexOf(':') + 1) : tagName;
       return (
+        name === 'row' ||
         name === 'tradeItem' ||
         name === 'nutrientDetail' ||
         name === 'netContent' ||
