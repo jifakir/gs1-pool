@@ -26,6 +26,9 @@ const envSchema = z.object({
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).default('info'),
   USER_AGENT: z.string().min(1).default('gs1-pool/1.0.0'),
 
+  /** When > 0, logs the first N characters of XML from GET /items/{invocationId} (status 200) for debugging parsers. Default 0 = off. Cap 512KiB. */
+  LOG_DATALINK_ITEMS_BODY_PREVIEW_CHARS: z.coerce.number().int().min(0).max(524_288).default(0),
+
   INITIAL_UPDATED_SINCE: z
     .string()
     .optional()

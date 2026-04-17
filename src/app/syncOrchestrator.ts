@@ -14,11 +14,37 @@ function jitter(maxMs: number): number {
   return Math.floor(Math.random() * maxMs);
 }
 
+function maybeLogXmlBodyPreview(
+  logger: AppLogger,
+  previewChars: number,
+  meta: Record<string, unknown>,
+  bodyText: string,
+  msg: string,
+): void {
+  if (previewChars <= 0) return;
+  logger.info(
+    {
+      ...meta,
+      totalChars: bodyText.length,
+      truncated: bodyText.length > previewChars,
+      preview: bodyText.slice(0, previewChars),
+    },
+    msg,
+  );
+}
+
 async function pollItemsResult(params: {
   api: DatalinkApi;
-  cfg: Pick<AppConfig, 'POLL_MAX_MS' | 'POLL_BASE_DELAY_MS' | 'POLL_MAX_DELAY_MS'>;
+  cfg: Pick<
+    AppConfig,
+    | 'POLL_MAX_MS'
+    | 'POLL_BASE_DELAY_MS'
+    | 'POLL_MAX_DELAY_MS'
+    | 'LOG_DATALINK_ITEMS_BODY_PREVIEW_CHARS'
+  >;
   logger: AppLogger;
   invocationId: string;
+  gln: string;
 }): Promise<string> {
   const deadline = Date.now() + params.cfg.POLL_MAX_MS;
   let attempt = 0;
@@ -28,6 +54,17 @@ async function pollItemsResult(params: {
     const res = await params.api.getItemsByInvocationId(params.invocationId);
 
     if (res.status === 200) {
+      maybeLogXmlBodyPreview(
+        params.logger,
+        params.cfg.LOG_DATALINK_ITEMS_BODY_PREVIEW_CHARS,
+        {
+          phase: 'items_poll',
+          gln: params.gln,
+          invocationId: params.invocationId,
+        },
+        res.bodyText,
+        'datalink_items_invocation_xml_preview',
+      );
       return res.bodyText;
     }
     if (res.status === 204) {
@@ -87,11 +124,22 @@ async function fetchItemsXml(params: {
       cfg: params.cfg,
       logger: params.logger,
       invocationId,
+      gln: params.gln,
     });
     return xml.trim() ? xml : null;
   }
 
   if (start.status === 200) {
+    maybeLogXmlBodyPreview(
+      params.logger,
+      params.cfg.LOG_DATALINK_ITEMS_BODY_PREVIEW_CHARS,
+      {
+        phase: 'items_start_sync',
+        gln: params.gln,
+      },
+      start.bodyText,
+      'datalink_items_start_xml_preview',
+    );
     return start.bodyText.trim() ? start.bodyText : null;
   }
 
@@ -167,6 +215,16 @@ export async function runSyncJob(params: {
       gln,
       targetMarketCountryCode: tmcc,
     });
+    if (dtos.length === 0 && xml.trim().length > 0) {
+      logger.warn(
+        {
+          gln,
+          responseXmlChars: xml.length,
+          hint: 'Set LOG_DATALINK_ITEMS_BODY_PREVIEW_CHARS to inspect raw XML; check tradeItem / GTIN element names vs extractTradeItemDtos.',
+        },
+        'sync_no_trade_items_extracted_from_xml',
+      );
+    }
     metrics.itemsFetched += dtos.length;
 
     if (typeof options.maxItems === 'number') {
