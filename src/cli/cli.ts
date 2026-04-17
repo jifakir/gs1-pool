@@ -27,7 +27,7 @@ async function main(): Promise<void> {
   program.name('gs1-pool').description('GS1 Nederland Datalink → MongoDB sync');
 
   program
-    .command('sync')
+    .command('sync', { isDefault: true })
     .option('--dry-run', 'Do not write to Mongo; print a sample payload', false)
     .option('--verbose', 'Shortcut for --log-level debug', false)
     .option('--log-level <level>', 'fatal|error|warn|info|debug|trace|silent')
