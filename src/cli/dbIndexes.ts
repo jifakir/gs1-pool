@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 import 'dotenv/config';
 import { loadConfig, redactMongoUri } from '../config/env.js';
 import { createLogger } from '../observability/createLogger.js';

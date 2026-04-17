@@ -2,21 +2,35 @@
   "name": "gs1-pool",
   "version": "1.0.0",
   "private": true,
+  "packageManager": "pnpm@10.33.0",
   "description": "GS1 Nederland Datalink → MongoDB product sync",
   "type": "module",
   "engines": {
     "node": ">=20"
   },
+  "bin": {
+    "gs1-pool": "./dist/cli/cli.js"
+  },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
+    "clean": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\"",
+    "prebuild": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\"",
+    "start": "node dist/cli/cli.js",
+    "start:sync": "node dist/cli/cli.js sync",
+    "start:indexes": "node dist/cli/dbIndexes.js",
+    "dev": "tsx src/cli/cli.ts",
+    "dev:sync": "tsx src/cli/cli.ts sync",
+    "dev:indexes": "tsx src/cli/dbIndexes.ts",
+    "cli": "tsx src/cli/cli.ts",
+    "db:indexes": "tsx src/cli/dbIndexes.ts",
+    "verify": "pnpm run typecheck && pnpm run lint && pnpm run test && pnpm run build",
+    "docker:build": "docker build -t gs1-pool:latest .",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "test": "vitest run",
-    "test:watch": "vitest",
-    "cli": "tsx src/cli/cli.ts",
-    "db:indexes": "tsx src/cli/dbIndexes.ts"
+    "test:watch": "vitest"
   },
   "dependencies": {
     "commander": "^12.1.0",
