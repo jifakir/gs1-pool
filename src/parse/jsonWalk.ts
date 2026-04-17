@@ -3,6 +3,43 @@ export function stripNs(key: string): string {
   return idx === -1 ? key : key.slice(idx + 1);
 }
 
+/** Read child field by local tag name (case-insensitive). GS1 uses mixed casing (`GLN`, `row`, etc.). */
+export function getFieldCI(obj: Record<string, unknown>, localName: string): unknown {
+  const want = localName.toLowerCase();
+  for (const [k, v] of Object.entries(obj)) {
+    if (stripNs(k).toLowerCase() === want) {
+      return v;
+    }
+  }
+  return undefined;
+}
+
+/**
+ * Plain text from a fast-xml-parser value: strings, numbers, or elements with attributes
+ * (`{ "#text": "528", "@_codeListVersion": "4" }`).
+ */
+export function scalarTextFromUnknown(value: unknown): string | undefined {
+  if (value === null || value === undefined) return undefined;
+  if (typeof value === 'string') {
+    const t = value.trim();
+    return t.length ? t : undefined;
+  }
+  if (typeof value === 'number' && Number.isFinite(value)) return String(value);
+  if (typeof value === 'boolean') return value ? 'true' : 'false';
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      const s = scalarTextFromUnknown(item);
+      if (s !== undefined) return s;
+    }
+    return undefined;
+  }
+  if (typeof value === 'object') {
+    const o = value as Record<string, unknown>;
+    if ('#text' in o) return scalarTextFromUnknown(o['#text']);
+  }
+  return undefined;
+}
+
 export function collectNodesByLocalName(root: unknown, localName: string): unknown[] {
   const out: unknown[] = [];
 
@@ -17,7 +54,7 @@ export function collectNodesByLocalName(root: unknown, localName: string): unkno
     const obj = node as Record<string, unknown>;
     for (const [k, v] of Object.entries(obj)) {
       const stripped = stripNs(k);
-      if (stripped === localName) {
+      if (stripped.toLowerCase() === localName.toLowerCase()) {
         if (Array.isArray(v)) {
           for (const it of v) out.push(it);
         } else {

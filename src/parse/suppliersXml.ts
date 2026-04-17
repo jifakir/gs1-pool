@@ -1,5 +1,5 @@
 import { createXmlParser } from './xmlParser.js';
-import { stripNs } from './jsonWalk.js';
+import { getFieldCI, stripNs } from './jsonWalk.js';
 
 export type SupplierRow = {
   gln: string;
@@ -16,17 +16,6 @@ function toNumber(value: unknown): number | undefined {
   if (typeof value === 'string') {
     const n = Number.parseInt(value, 10);
     return Number.isFinite(n) ? n : undefined;
-  }
-  return undefined;
-}
-
-/** Match XML tag names case-insensitively (GS1 returns e.g. `<GLN>` not `<gln>`). */
-function getFieldCI(obj: Record<string, unknown>, localName: string): unknown {
-  const want = localName.toLowerCase();
-  for (const [k, v] of Object.entries(obj)) {
-    if (stripNs(k).toLowerCase() === want) {
-      return v;
-    }
   }
   return undefined;
 }

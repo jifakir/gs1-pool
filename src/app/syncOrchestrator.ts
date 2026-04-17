@@ -110,6 +110,16 @@ async function fetchItemsXml(params: {
   });
 
   if (start.status === 204) {
+    params.logger.info(
+      {
+        gln: params.gln,
+        targetMarketCountryCode: params.cfg.TARGET_MARKET_COUNTRY_CODE,
+        updatedSince: params.updatedSince,
+        meaning:
+          'GS1 returned 204: no trade items match this query (often nothing changed since updatedSince for incremental sync).',
+      },
+      'datalink_items_start_no_content_204',
+    );
     return null;
   }
 
@@ -126,7 +136,18 @@ async function fetchItemsXml(params: {
       invocationId,
       gln: params.gln,
     });
-    return xml.trim() ? xml : null;
+    if (!xml.trim()) {
+      params.logger.info(
+        {
+          gln: params.gln,
+          invocationId,
+          meaning: 'Poll returned 200 with empty body — no XML payload.',
+        },
+        'datalink_items_poll_empty_body',
+      );
+      return null;
+    }
+    return xml;
   }
 
   if (start.status === 200) {
@@ -140,7 +161,14 @@ async function fetchItemsXml(params: {
       start.bodyText,
       'datalink_items_start_xml_preview',
     );
-    return start.bodyText.trim() ? start.bodyText : null;
+    if (!start.bodyText.trim()) {
+      params.logger.info(
+        { gln: params.gln, meaning: 'startItems returned 200 with empty body.' },
+        'datalink_items_start_sync_empty_body',
+      );
+      return null;
+    }
+    return start.bodyText;
   }
 
   throw new DatalinkHttpError(`Unexpected status starting items export`, start.status, 'items:start');
@@ -206,7 +234,7 @@ export async function runSyncJob(params: {
     }
 
     if (!xml) {
-      logger.info({ gln }, 'sync_no_items_for_selection');
+      logger.debug({ gln, updatedSince }, 'sync_supplier_skipped_no_xml_payload');
       continue;
     }
 
@@ -220,7 +248,8 @@ export async function runSyncJob(params: {
         {
           gln,
           responseXmlChars: xml.length,
-          hint: 'Set LOG_DATALINK_ITEMS_BODY_PREVIEW_CHARS to inspect raw XML; check tradeItem / GTIN element names vs extractTradeItemDtos.',
+          hint:
+            'Set LOG_DATALINK_ITEMS_BODY_PREVIEW_CHARS to inspect raw XML. Expected `<rows><row>` or `<tradeItem>` with gtin/gln/targetMarketCountryCode (TMCC may use XML attributes — parsed via scalarTextFromUnknown). GS1 GTIN lengths must be 8 / 12 / 13 / 14 digits.',
         },
         'sync_no_trade_items_extracted_from_xml',
       );

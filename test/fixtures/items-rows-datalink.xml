@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rows>
+  <row>
+    <gln>5000453000003</gln>
+    <gtin>08719587049242</gtin>
+    <targetMarketCountryCode codeListVersion="4">528</targetMarketCountryCode>
+    <tradeItemProperties>
+      <gtin>08719587049242</gtin>
+      <tradeItemInformation>
+        <extension></extension>
+      </tradeItemInformation>
+    </tradeItemProperties>
+  </row>
+</rows>
