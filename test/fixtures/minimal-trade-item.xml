@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<root>
+  <tradeItem>
+    <gtin>08711741355022</gtin>
+    <descriptionShort>Kokosmelk</descriptionShort>
+    <functionalName>Kokosmelk</functionalName>
+    <brandName>fairtrade ORIGINAL</brandName>
+    <regulatedProductName>Kokosmelk</regulatedProductName>
+    <ingredientStatement>Ingrediënten: Kokosmelk (kokosextract, water), stabilisatoren (E466, E412).</ingredientStatement>
+    <lastChangeDateTime>2014-10-08T00:00:00+00:00</lastChangeDateTime>
+    <netContent>
+      <value>200</value>
+      <measurementUnitCode>MLT</measurementUnitCode>
+    </netContent>
+    <allergenRelatedInformation>
+      <allergenTypeCode>SO</allergenTypeCode>
+      <levelOfContainmentCode>CONTAINS</levelOfContainmentCode>
+    </allergenRelatedInformation>
+    <preparationStateCode>UNPREPARED</preparationStateCode>
+    <nutrientBasisQuantity>
+      <value>100</value>
+      <measurementUnitCode>MLT</measurementUnitCode>
+    </nutrientBasisQuantity>
+    <nutrientDetail>
+      <nutrientTypeCode>ENER-</nutrientTypeCode>
+      <measurementPrecisionCode>APPROXIMATELY</measurementPrecisionCode>
+      <quantityContained>
+        <value>683</value>
+        <measurementUnitCode>KJO</measurementUnitCode>
+      </quantityContained>
+    </nutrientDetail>
+    <nutrientDetail>
+      <nutrientTypeCode>ENER-</nutrientTypeCode>
+      <measurementPrecisionCode>APPROXIMATELY</measurementPrecisionCode>
+      <quantityContained>
+        <value>164</value>
+        <measurementUnitCode>E14</measurementUnitCode>
+      </quantityContained>
+    </nutrientDetail>
+    <nutrientDetail>
+      <nutrientTypeCode>FAT</nutrientTypeCode>
+      <measurementPrecisionCode>APPROXIMATELY</measurementPrecisionCode>
+      <quantityContained>
+        <value>17</value>
+        <measurementUnitCode>GRM</measurementUnitCode>
+      </quantityContained>
+    </nutrientDetail>
+    <nutrientDetail>
+      <nutrientTypeCode>PRO-</nutrientTypeCode>
+      <measurementPrecisionCode>APPROXIMATELY</measurementPrecisionCode>
+      <quantityContained>
+        <value>1.2</value>
+        <measurementUnitCode>GRM</measurementUnitCode>
+      </quantityContained>
+    </nutrientDetail>
+    <nutrientDetail>
+      <nutrientTypeCode>CHOAVL</nutrientTypeCode>
+      <measurementPrecisionCode>APPROXIMATELY</measurementPrecisionCode>
+      <quantityContained>
+        <value>1.6</value>
+        <measurementUnitCode>GRM</measurementUnitCode>
+      </quantityContained>
+    </nutrientDetail>
+    <consumerInstructions>
+      <consumerStorageInstructions>
+        <value>Bewaar in koelkast.</value>
+        <languageCode>nl</languageCode>
+      </consumerStorageInstructions>
+    </consumerInstructions>
+    <url>https://example.invalid/product.jpg</url>
+  </tradeItem>
+</root>

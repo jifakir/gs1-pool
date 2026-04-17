@@ -1,0 +1,40 @@
+{
+  "name": "gs1-pool",
+  "version": "1.0.0",
+  "private": true,
+  "description": "GS1 Nederland Datalink → MongoDB product sync",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "cli": "tsx src/cli/cli.ts",
+    "db:indexes": "tsx src/cli/dbIndexes.ts"
+  },
+  "dependencies": {
+    "commander": "^12.1.0",
+    "dotenv": "^16.6.1",
+    "fast-xml-parser": "^4.5.1",
+    "mongodb": "^6.12.0",
+    "pino": "^9.6.0",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.18.0",
+    "@types/node": "^22.10.5",
+    "eslint": "^9.18.0",
+    "globals": "^15.14.0",
+    "prettier": "^3.4.2",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3",
+    "typescript-eslint": "^8.20.0",
+    "vitest": "^2.1.8"
+  }
+}
