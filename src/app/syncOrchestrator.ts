@@ -3,15 +3,17 @@ import type { DatalinkApi } from '../datalink/datalinkApi.js';
 import { DatalinkHttpError, DatalinkNotFoundError } from '../errors/DatalinkHttpError.js';
 import { mapTradeItemDtoToProductDocument, maxLastChangeIso } from '../map/toProductDocument.js';
 import type { SyncMetrics } from '../observability/metrics.js';
+import { buildGs1ItemId, buildXmlToJsonItemSnapshots } from '../parse/buildXmlToJsonItemSnapshots.js';
+import { cleanJsonForXmlToJsonStorage } from '../parse/cleanJsonForXmlToJsonStorage.js';
 import { parseDatalinkItemsXmlToJson } from '../parse/datalinkItemsXmlToJson.js';
 import { parseSuppliersXml } from '../parse/suppliersXml.js';
 import { extractTradeItemDtos, parseTradeItemDtoFromItemResponse } from '../parse/tradeItemXml.js';
 import type { AppLogger } from '../types/logger.js';
 import type { ProductsRepository } from '../db/productsRepository.js';
-import type { XmlToJsonRepository, XmlToJsonSnapshotInput } from '../db/xmlToJsonRepository.js';
+import type { XmlToJsonRepository } from '../db/xmlToJsonRepository.js';
 import type { SyncStateRepository } from '../db/syncStateRepository.js';
 import { sleep } from '../datalink/rateLimiter.js';
-import { chunksForXmlToJsonStorage } from './xmlPayloadChunks.js';
+import { persistXmlToJsonSnapshots } from '../storage/persistXmlToJsonSnapshots.js';
 
 function jitter(maxMs: number): number {
   return Math.floor(Math.random() * maxMs);
@@ -104,25 +106,31 @@ async function saveItemsXmlAsJsonSnapshots(params: {
   updatedSince: string;
   xml: string;
 }): Promise<void> {
-  if (params.cfg.DRY_RUN || !params.cfg.XML_TO_JSON_SAVE || !params.xmlToJson) {
+  if (params.cfg.DRY_RUN || !params.cfg.XML_TO_JSON_SAVE) {
     return;
   }
   const parsed = parseDatalinkItemsXmlToJson(params.xml);
-  const chunkJsons = chunksForXmlToJsonStorage(parsed);
-  const records: XmlToJsonSnapshotInput[] = chunkJsons.map((json) => ({
+  const records = buildXmlToJsonItemSnapshots({
+    parsed,
     correlationId: params.correlationId,
-    gln: params.gln,
-    targetMarketCountryCode: params.cfg.TARGET_MARKET_COUNTRY_CODE,
+    glnContext: params.gln,
+    tmccContext: params.cfg.TARGET_MARKET_COUNTRY_CODE,
     updatedSince: params.updatedSince,
     source: 'sync_items_export',
-    json,
-  }));
-  try {
-    const n = await params.xmlToJson.insertSnapshots(records);
-    params.metrics.itemsXmlToJsonSaved += n;
-  } catch (err) {
-    params.logger.error({ gln: params.gln, err }, 'xml_to_json_save_failed');
-  }
+    clean: {
+      trimStrings: params.cfg.XMLTOJSON_CLEAN_TRIM_STRINGS,
+      dropEmptyStrings: params.cfg.XMLTOJSON_CLEAN_DROP_EMPTY_STRINGS,
+    },
+  });
+  await persistXmlToJsonSnapshots({
+    mongo: params.xmlToJson,
+    localDir: params.cfg.XMLTOJSON_LOCAL_DIR,
+    logger: params.logger,
+    metrics: params.metrics,
+    rawXml: params.xml,
+    snapshots: records,
+    dedupeMode: params.cfg.XMLTOJSON_DEDUPE_MODE,
+  });
 }
 
 async function fetchItemsXml(params: {
@@ -377,22 +385,35 @@ export async function runFetchOneJob(params: {
 
   metrics.itemsFetched += 1;
 
-  if (!cfg.DRY_RUN && cfg.XML_TO_JSON_SAVE && params.xmlToJson) {
+  if (!cfg.DRY_RUN && cfg.XML_TO_JSON_SAVE) {
     const parsed = parseDatalinkItemsXmlToJson(res.bodyText);
-    const chunkJsons = chunksForXmlToJsonStorage(parsed);
-    const records: XmlToJsonSnapshotInput[] = chunkJsons.map((json) => ({
-      correlationId: params.correlationId,
-      gln: params.gln,
-      targetMarketCountryCode: params.targetMarketCountryCode,
-      source: 'fetch_one',
-      json,
-    }));
-    try {
-      const n = await params.xmlToJson.insertSnapshots(records);
-      metrics.itemsXmlToJsonSaved += n;
-    } catch (err) {
-      logger.error({ gln: params.gln, gtin: params.gtin, err }, 'xml_to_json_save_failed');
-    }
+    const glnD = params.gln.replace(/\D/g, '');
+    const gtinD = params.gtin.replace(/\D/g, '');
+    const tmccD = params.targetMarketCountryCode.replace(/\D/g, '');
+    const itemId = buildGs1ItemId(glnD, gtinD, tmccD);
+    const json = cleanJsonForXmlToJsonStorage(parsed, {
+      trimStrings: cfg.XMLTOJSON_CLEAN_TRIM_STRINGS,
+      dropEmptyStrings: cfg.XMLTOJSON_CLEAN_DROP_EMPTY_STRINGS,
+    });
+    await persistXmlToJsonSnapshots({
+      mongo: params.xmlToJson,
+      localDir: cfg.XMLTOJSON_LOCAL_DIR,
+      logger,
+      metrics,
+      rawXml: res.bodyText,
+      snapshots: [
+        {
+          itemId,
+          correlationId: params.correlationId,
+          gln: glnD,
+          gtin: gtinD,
+          targetMarketCountryCode: tmccD,
+          source: 'fetch_one',
+          json,
+        },
+      ],
+      dedupeMode: cfg.XMLTOJSON_DEDUPE_MODE,
+    });
   }
 
   if (!cfg.SAVE_PRODUCTS) {

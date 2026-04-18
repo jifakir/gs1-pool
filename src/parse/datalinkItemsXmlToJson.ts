@@ -1,6 +1,9 @@
-import { createXmlParser } from './xmlParser.js';
+import { createAuditXmlParser } from './xmlParser.js';
 
-/** Same parser options as trade-item extraction — exact XML → JS tree fast-xml-parser output. */
+/**
+ * Parse items XML for **xmltojson audit storage only**: verbatim text, namespaced keys, default
+ * array rules (no custom `isArray`). Persist the returned object as-is — full API response body.
+ */
 export function parseDatalinkItemsXmlToJson(xml: string): unknown {
-  return createXmlParser().parse(xml);
+  return createAuditXmlParser().parse(xml);
 }

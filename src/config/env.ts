@@ -13,6 +13,29 @@ const envSchema = z.object({
   /** Collection for raw Datalink items XML → JSON snapshots (staging / review). Default `xmltojson`. */
   MONGODB_XMLTOJSON_COLLECTION: z.string().min(1).default('xmltojson'),
 
+  /**
+   * Directory for xml-to-json fallbacks when MongoDB insert fails or document exceeds BSON size.
+   * Relative paths are resolved from `process.cwd()`. Default `storage/xmltojson`.
+   */
+  XMLTOJSON_LOCAL_DIR: z.string().min(1).default('storage/xmltojson'),
+
+  /** Trim leaf strings in stored JSON (xmltojson only). */
+  XMLTOJSON_CLEAN_TRIM_STRINGS: z
+    .string()
+    .optional()
+    .default('true')
+    .transform((v) => v.toLowerCase() === 'true' || v === '1'),
+
+  /** Remove empty string properties after trim (xmltojson only). */
+  XMLTOJSON_CLEAN_DROP_EMPTY_STRINGS: z
+    .string()
+    .optional()
+    .default('false')
+    .transform((v) => v.toLowerCase() === 'true' || v === '1'),
+
+  /** `skip` — do not insert when `itemId` already exists; `replace` — overwrite. */
+  XMLTOJSON_DEDUPE_MODE: z.enum(['skip', 'replace']).default('skip'),
+
   /** Persist raw items XML→JSON snapshots (see `XmlToJsonRepository`). */
   XML_TO_JSON_SAVE: z
     .string()

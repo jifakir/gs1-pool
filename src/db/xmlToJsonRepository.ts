@@ -1,13 +1,15 @@
 import type { Collection, Document } from 'mongodb';
 
 export type XmlToJsonSnapshotInput = {
+  /** Dedupe key: typically `glnDigits:gtinDigits:tmccDigits` from GS1 identifiers. */
+  itemId: string;
   correlationId: string;
   gln: string;
+  gtin?: string;
   targetMarketCountryCode: string;
   updatedSince?: string;
-  /** Source of the snapshot for later filtering (`sync_items_export`, `fetch_one`). */
   source: 'sync_items_export' | 'fetch_one';
-  /** Exact subtree from {@link parseDatalinkItemsXmlToJson}; do not reshape. */
+  /** Cleaned subtree for this item (or full tree when no row/tradeItem split). */
   json: unknown;
 };
 
@@ -16,29 +18,39 @@ export class XmlToJsonRepository {
 
   async ensureIndexes(): Promise<void> {
     await this.collection.createIndexes([
+      { key: { itemId: 1 }, unique: true, name: 'xmltojson_itemId_unique' },
       { key: { gln: 1, createdAt: -1 }, name: 'xmltojson_gln_createdAt' },
       { key: { correlationId: 1 }, name: 'xmltojson_correlationId' },
       { key: { source: 1 }, name: 'xmltojson_source' },
     ]);
   }
 
-  async insertSnapshots(inputs: XmlToJsonSnapshotInput[]): Promise<number> {
-    if (inputs.length === 0) return 0;
+  /**
+   * @param mode `skip` — do nothing if `itemId` exists; `replace` — replace existing document.
+   * @returns whether a document was written (`false` when skipped as duplicate in `skip` mode).
+   */
+  async upsertSnapshot(rec: XmlToJsonSnapshotInput, mode: 'skip' | 'replace'): Promise<boolean> {
     const now = new Date();
-    await this.collection.insertMany(
-      inputs.map((rec) =>
-        ({
-          correlationId: rec.correlationId,
-          gln: rec.gln,
-          targetMarketCountryCode: rec.targetMarketCountryCode,
-          updatedSince: rec.updatedSince,
-          source: rec.source,
-          json: rec.json,
-          createdAt: now,
-        }) satisfies Document,
-      ),
-      { ordered: false },
-    );
-    return inputs.length;
+    const doc = {
+      itemId: rec.itemId,
+      correlationId: rec.correlationId,
+      gln: rec.gln,
+      gtin: rec.gtin,
+      targetMarketCountryCode: rec.targetMarketCountryCode,
+      updatedSince: rec.updatedSince,
+      source: rec.source,
+      json: rec.json,
+      createdAt: now,
+    } satisfies Document;
+
+    if (mode === 'skip') {
+      const hit = await this.collection.findOne({ itemId: rec.itemId }, { projection: { _id: 1 } });
+      if (hit) return false;
+      await this.collection.insertOne(doc);
+      return true;
+    }
+
+    await this.collection.replaceOne({ itemId: rec.itemId }, doc, { upsert: true });
+    return true;
   }
 }
