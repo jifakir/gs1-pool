@@ -7,6 +7,7 @@ import { DatalinkClient } from '../datalink/datalinkClient.js';
 import { connectMongo } from '../db/mongo.js';
 import { ProductsRepository } from '../db/productsRepository.js';
 import { SyncStateRepository, type SyncStateRecord } from '../db/syncStateRepository.js';
+import { XmlToJsonRepository } from '../db/xmlToJsonRepository.js';
 import { createLogger } from '../observability/createLogger.js';
 import { SyncMetrics } from '../observability/metrics.js';
 import { runFetchOneJob, runSyncJob } from '../app/syncOrchestrator.js';
@@ -56,6 +57,7 @@ async function main(): Promise<void> {
         logger.info(
           {
             dryRun: cfg.DRY_RUN,
+            saveProducts: cfg.SAVE_PRODUCTS,
             mongo: cfg.DRY_RUN ? undefined : redactMongoUri(cfg.MONGODB_URI),
             datalinkBaseUrl: cfg.DATALINK_BASE_URL,
           },
@@ -72,6 +74,7 @@ async function main(): Promise<void> {
             const syncState = new SyncStateRepository(
               db.collection<SyncStateRecord>(cfg.MONGODB_SYNC_STATE_COLLECTION),
             );
+            const xmlToJson = new XmlToJsonRepository(db.collection(cfg.MONGODB_XMLTOJSON_COLLECTION));
 
             let shouldStop = false;
             const onSigInt = (): void => {
@@ -88,6 +91,8 @@ async function main(): Promise<void> {
                 api,
                 products,
                 syncState,
+                xmlToJson,
+                correlationId,
                 options: {
                   maxSuppliers: opts.maxSuppliers,
                   maxItems: opts.maxItems,
@@ -107,6 +112,7 @@ async function main(): Promise<void> {
             logger,
             metrics,
             api,
+            correlationId,
             options: {
               maxSuppliers: opts.maxSuppliers,
               maxItems: opts.maxItems,
@@ -153,12 +159,15 @@ async function main(): Promise<void> {
           try {
             const db = client.db(cfg.MONGODB_DB);
             const products = new ProductsRepository(db.collection(cfg.MONGODB_COLLECTION));
+            const xmlToJson = new XmlToJsonRepository(db.collection(cfg.MONGODB_XMLTOJSON_COLLECTION));
             await runFetchOneJob({
               cfg,
               logger,
               metrics,
               api,
               products,
+              xmlToJson,
+              correlationId,
               gln: opts.gln,
               gtin: opts.gtin,
               targetMarketCountryCode: opts.tmcc,
@@ -172,6 +181,7 @@ async function main(): Promise<void> {
             logger,
             metrics,
             api,
+            correlationId,
             gln: opts.gln,
             gtin: opts.gtin,
             targetMarketCountryCode: opts.tmcc,

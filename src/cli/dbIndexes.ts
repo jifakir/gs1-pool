@@ -5,6 +5,7 @@ import { createLogger } from '../observability/createLogger.js';
 import { connectMongo } from '../db/mongo.js';
 import { ProductsRepository } from '../db/productsRepository.js';
 import { SyncStateRepository, type SyncStateRecord } from '../db/syncStateRepository.js';
+import { XmlToJsonRepository } from '../db/xmlToJsonRepository.js';
 import { randomUUID } from 'node:crypto';
 
 async function main(): Promise<void> {
@@ -18,8 +19,10 @@ async function main(): Promise<void> {
     const syncState = new SyncStateRepository(
       db.collection<SyncStateRecord>(cfg.MONGODB_SYNC_STATE_COLLECTION),
     );
+    const xmlToJson = new XmlToJsonRepository(db.collection(cfg.MONGODB_XMLTOJSON_COLLECTION));
     await products.ensureIndexes();
     await syncState.ensureIndexes();
+    await xmlToJson.ensureIndexes();
     logger.info({ mongoUri: redactMongoUri(cfg.MONGODB_URI), db: cfg.MONGODB_DB }, 'indexes_ensured');
   } finally {
     await client.close();

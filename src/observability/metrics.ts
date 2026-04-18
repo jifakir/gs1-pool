@@ -4,6 +4,8 @@ export class SyncMetrics {
   itemsFetched = 0;
   itemsMapped = 0;
   itemsUpserted = 0;
+  /** Rows written to the xml-to-json staging collection. */
+  itemsXmlToJsonSaved = 0;
   itemsFailed = 0;
   readonly failuresByReason: Record<FailureReason, number> = {
     http: 0,
@@ -17,6 +19,7 @@ export class SyncMetrics {
       itemsFetched: this.itemsFetched,
       itemsMapped: this.itemsMapped,
       itemsUpserted: this.itemsUpserted,
+      itemsXmlToJsonSaved: this.itemsXmlToJsonSaved,
       itemsFailed: this.itemsFailed,
       failures_http: this.failuresByReason.http,
       failures_parse: this.failuresByReason.parse,

@@ -1,14 +1,17 @@
-import type { AppConfig } from '../config/env.js';
+import { effectiveItemsXmlPreviewChars, type AppConfig } from '../config/env.js';
 import type { DatalinkApi } from '../datalink/datalinkApi.js';
 import { DatalinkHttpError, DatalinkNotFoundError } from '../errors/DatalinkHttpError.js';
 import { mapTradeItemDtoToProductDocument, maxLastChangeIso } from '../map/toProductDocument.js';
 import type { SyncMetrics } from '../observability/metrics.js';
+import { parseDatalinkItemsXmlToJson } from '../parse/datalinkItemsXmlToJson.js';
 import { parseSuppliersXml } from '../parse/suppliersXml.js';
 import { extractTradeItemDtos, parseTradeItemDtoFromItemResponse } from '../parse/tradeItemXml.js';
 import type { AppLogger } from '../types/logger.js';
 import type { ProductsRepository } from '../db/productsRepository.js';
+import type { XmlToJsonRepository, XmlToJsonSnapshotInput } from '../db/xmlToJsonRepository.js';
 import type { SyncStateRepository } from '../db/syncStateRepository.js';
 import { sleep } from '../datalink/rateLimiter.js';
+import { chunksForXmlToJsonStorage } from './xmlPayloadChunks.js';
 
 function jitter(maxMs: number): number {
   return Math.floor(Math.random() * maxMs);
@@ -35,13 +38,8 @@ function maybeLogXmlBodyPreview(
 
 async function pollItemsResult(params: {
   api: DatalinkApi;
-  cfg: Pick<
-    AppConfig,
-    | 'POLL_MAX_MS'
-    | 'POLL_BASE_DELAY_MS'
-    | 'POLL_MAX_DELAY_MS'
-    | 'LOG_DATALINK_ITEMS_BODY_PREVIEW_CHARS'
-  >;
+  cfg: Pick<AppConfig, 'POLL_MAX_MS' | 'POLL_BASE_DELAY_MS' | 'POLL_MAX_DELAY_MS'>;
+  itemXmlPreviewChars: number;
   logger: AppLogger;
   invocationId: string;
   gln: string;
@@ -56,7 +54,7 @@ async function pollItemsResult(params: {
     if (res.status === 200) {
       maybeLogXmlBodyPreview(
         params.logger,
-        params.cfg.LOG_DATALINK_ITEMS_BODY_PREVIEW_CHARS,
+        params.itemXmlPreviewChars,
         {
           phase: 'items_poll',
           gln: params.gln,
@@ -96,6 +94,37 @@ async function pollItemsResult(params: {
   throw new DatalinkHttpError('Polling timed out', 408, `items:${params.invocationId}`);
 }
 
+async function saveItemsXmlAsJsonSnapshots(params: {
+  cfg: AppConfig;
+  logger: AppLogger;
+  metrics: SyncMetrics;
+  xmlToJson?: XmlToJsonRepository;
+  correlationId: string;
+  gln: string;
+  updatedSince: string;
+  xml: string;
+}): Promise<void> {
+  if (params.cfg.DRY_RUN || !params.cfg.XML_TO_JSON_SAVE || !params.xmlToJson) {
+    return;
+  }
+  const parsed = parseDatalinkItemsXmlToJson(params.xml);
+  const chunkJsons = chunksForXmlToJsonStorage(parsed);
+  const records: XmlToJsonSnapshotInput[] = chunkJsons.map((json) => ({
+    correlationId: params.correlationId,
+    gln: params.gln,
+    targetMarketCountryCode: params.cfg.TARGET_MARKET_COUNTRY_CODE,
+    updatedSince: params.updatedSince,
+    source: 'sync_items_export',
+    json,
+  }));
+  try {
+    const n = await params.xmlToJson.insertSnapshots(records);
+    params.metrics.itemsXmlToJsonSaved += n;
+  } catch (err) {
+    params.logger.error({ gln: params.gln, err }, 'xml_to_json_save_failed');
+  }
+}
+
 async function fetchItemsXml(params: {
   api: DatalinkApi;
   cfg: AppConfig;
@@ -123,6 +152,8 @@ async function fetchItemsXml(params: {
     return null;
   }
 
+  const itemXmlPreviewChars = effectiveItemsXmlPreviewChars(params.cfg);
+
   if (start.status === 202) {
     const invocationId = start.bodyText.trim();
     if (!invocationId) {
@@ -132,6 +163,7 @@ async function fetchItemsXml(params: {
     const xml = await pollItemsResult({
       api: params.api,
       cfg: params.cfg,
+      itemXmlPreviewChars,
       logger: params.logger,
       invocationId,
       gln: params.gln,
@@ -153,7 +185,7 @@ async function fetchItemsXml(params: {
   if (start.status === 200) {
     maybeLogXmlBodyPreview(
       params.logger,
-      params.cfg.LOG_DATALINK_ITEMS_BODY_PREVIEW_CHARS,
+      itemXmlPreviewChars,
       {
         phase: 'items_start_sync',
         gln: params.gln,
@@ -188,6 +220,8 @@ export async function runSyncJob(params: {
   api: DatalinkApi;
   products?: ProductsRepository;
   syncState?: SyncStateRepository;
+  xmlToJson?: XmlToJsonRepository;
+  correlationId: string;
   options?: SyncRunOptions;
 }): Promise<void> {
   const { cfg, logger, metrics, api } = params;
@@ -238,6 +272,22 @@ export async function runSyncJob(params: {
       continue;
     }
 
+    await saveItemsXmlAsJsonSnapshots({
+      cfg,
+      logger,
+      metrics,
+      xmlToJson: params.xmlToJson,
+      correlationId: params.correlationId,
+      gln,
+      updatedSince,
+      xml,
+    });
+
+    if (!cfg.SAVE_PRODUCTS) {
+      logger.info({ gln }, 'sync_products_pipeline_skipped_save_products_disabled');
+      continue;
+    }
+
     let dtos = extractTradeItemDtos({
       itemsResponseXml: xml,
       gln,
@@ -249,7 +299,7 @@ export async function runSyncJob(params: {
           gln,
           responseXmlChars: xml.length,
           hint:
-            'Set LOG_DATALINK_ITEMS_BODY_PREVIEW_CHARS to inspect raw XML. Expected `<rows><row>` or `<tradeItem>` with gtin/gln/targetMarketCountryCode (TMCC may use XML attributes — parsed via scalarTextFromUnknown). GS1 GTIN lengths must be 8 / 12 / 13 / 14 digits.',
+            'Enable item XML previews with LOG_DATALINK_ITEM_DETAILS=true (optional cap LOG_DATALINK_ITEMS_BODY_PREVIEW_CHARS), then inspect logs. Expected `<rows><row>` or `<tradeItem>` with gtin/gln/targetMarketCountryCode (TMCC may use XML attributes). GS1 GTIN lengths must be 8 / 12 / 13 / 14 digits.',
         },
         'sync_no_trade_items_extracted_from_xml',
       );
@@ -277,7 +327,7 @@ export async function runSyncJob(params: {
     }
 
     if (!params.products) {
-      throw new Error('ProductsRepository missing while DRY_RUN=false');
+      throw new Error('ProductsRepository missing while DRY_RUN=false and SAVE_PRODUCTS=true');
     }
 
     try {
@@ -303,6 +353,8 @@ export async function runFetchOneJob(params: {
   metrics: SyncMetrics;
   api: DatalinkApi;
   products?: ProductsRepository;
+  xmlToJson?: XmlToJsonRepository;
+  correlationId: string;
   gln: string;
   gtin: string;
   targetMarketCountryCode: string;
@@ -325,6 +377,29 @@ export async function runFetchOneJob(params: {
 
   metrics.itemsFetched += 1;
 
+  if (!cfg.DRY_RUN && cfg.XML_TO_JSON_SAVE && params.xmlToJson) {
+    const parsed = parseDatalinkItemsXmlToJson(res.bodyText);
+    const chunkJsons = chunksForXmlToJsonStorage(parsed);
+    const records: XmlToJsonSnapshotInput[] = chunkJsons.map((json) => ({
+      correlationId: params.correlationId,
+      gln: params.gln,
+      targetMarketCountryCode: params.targetMarketCountryCode,
+      source: 'fetch_one',
+      json,
+    }));
+    try {
+      const n = await params.xmlToJson.insertSnapshots(records);
+      metrics.itemsXmlToJsonSaved += n;
+    } catch (err) {
+      logger.error({ gln: params.gln, gtin: params.gtin, err }, 'xml_to_json_save_failed');
+    }
+  }
+
+  if (!cfg.SAVE_PRODUCTS) {
+    logger.info({ gln: params.gln, gtin: params.gtin }, 'fetch_one_products_skipped_save_products_disabled');
+    return;
+  }
+
   const dto = parseTradeItemDtoFromItemResponse({
     xml: res.bodyText,
     gln: params.gln,
@@ -342,7 +417,7 @@ export async function runFetchOneJob(params: {
   }
 
   if (!params.products) {
-    throw new Error('ProductsRepository missing while DRY_RUN=false');
+    throw new Error('ProductsRepository missing while DRY_RUN=false and SAVE_PRODUCTS=true');
   }
 
   await params.products.bulkUpsertMappedProducts([mapped]);
