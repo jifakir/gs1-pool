@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Shape copied from a real Datalink export: units/languages are XML attributes,
+     several languages per text field, two nutrient tables (per 100 ml and per portion). -->
+<rows>
+  <row>
+    <gln>8711578000003</gln>
+    <gtin>08711578582974</gtin>
+    <targetMarketCountryCode codeListVersion="4">528</targetMarketCountryCode>
+    <tradeItemProperties>
+      <gtin>08711578582974</gtin>
+      <tradeItemInformation>
+        <extension>
+          <allergen_information:allergenInformationModule xmlns:allergen_information="urn:gs1:gdsn:allergen_information:xsd:3" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="urn:gs1:gdsn:allergen_information:xsd:3 http://www.gs1globalregistry.net/3.1/schemas/gs1/gdsn/AllergenInformationModule.xsd">
+            <allergenRelatedInformation>
+              <allergen><allergenTypeCode>UW</allergenTypeCode><levelOfContainmentCode>CONTAINS</levelOfContainmentCode></allergen>
+              <allergen><allergenTypeCode>AY</allergenTypeCode><levelOfContainmentCode>MAY_CONTAIN</levelOfContainmentCode></allergen>
+              <allergen><allergenTypeCode>AY</allergenTypeCode><levelOfContainmentCode>CONTAINS</levelOfContainmentCode></allergen>
+            </allergenRelatedInformation>
+          </allergen_information:allergenInformationModule>
+          <food_and_beverage_ingredient:foodAndBeverageIngredientModule xmlns:food_and_beverage_ingredient="urn:gs1:gdsn:food_and_beverage_ingredient:xsd:3">
+            <ingredientStatement languageCode="fr">Ingrédients : eau, sucre.</ingredientStatement>
+            <ingredientStatement languageCode="nl">Ingrediënten: water, TARWEbloem 45%, suiker (12,5%), sojasaus (water, SOJAbonen), zout. Kan SELDERIJ bevatten.</ingredientStatement>
+          </food_and_beverage_ingredient:foodAndBeverageIngredientModule>
+          <nutritional_information:nutritionalInformationModule xmlns:nutritional_information="urn:gs1:gdsn:nutritional_information:xsd:3">
+            <nutrientHeader>
+              <preparationStateCode>UNPREPARED</preparationStateCode>
+              <nutrientBasisQuantity measurementUnitCode="MLT">250</nutrientBasisQuantity>
+              <nutrientDetail>
+                <nutrientTypeCode>ENER-</nutrientTypeCode>
+                <quantityContained measurementUnitCode="E14">999</quantityContained>
+              </nutrientDetail>
+            </nutrientHeader>
+            <nutrientHeader>
+              <preparationStateCode>UNPREPARED</preparationStateCode>
+              <nutrientBasisQuantity measurementUnitCode="MLT">100</nutrientBasisQuantity>
+              <nutrientDetail>
+                <nutrientTypeCode>ENER-</nutrientTypeCode>
+                <measurementPrecisionCode>APPROXIMATELY</measurementPrecisionCode>
+                <quantityContained measurementUnitCode="KJO">67</quantityContained>
+                <quantityContained measurementUnitCode="E14">16</quantityContained>
+              </nutrientDetail>
+              <nutrientDetail>
+                <nutrientTypeCode>FAT</nutrientTypeCode>
+                <quantityContained measurementUnitCode="GRM">0,3</quantityContained>
+              </nutrientDetail>
+              <nutrientDetail>
+                <nutrientTypeCode>CHOAVL</nutrientTypeCode>
+                <quantityContained measurementUnitCode="GRM">1.0</quantityContained>
+              </nutrientDetail>
+              <nutrientDetail>
+                <nutrientTypeCode>FIBTG</nutrientTypeCode>
+                <quantityContained measurementUnitCode="GRM">&lt;0.5</quantityContained>
+              </nutrientDetail>
+              <nutrientDetail>
+                <nutrientTypeCode>PRO-</nutrientTypeCode>
+                <quantityContained measurementUnitCode="GRM">1.5</quantityContained>
+              </nutrientDetail>
+            </nutrientHeader>
+          </nutritional_information:nutritionalInformationModule>
+          <packaging_marking:packagingMarkingModule xmlns:packaging_marking="urn:gs1:gdsn:packaging_marking:xsd:3">
+            <packagingMarking>
+              <packagingMarkedLabelAccreditationCode>GREEN_DOT</packagingMarkedLabelAccreditationCode>
+              <packagingMarkedLabelAccreditationCode>EU_ORGANIC_FARMING</packagingMarkedLabelAccreditationCode>
+              <packagingMarkedLabelAccreditationCode>EUROPEAN_V_LABEL_VEGAN</packagingMarkedLabelAccreditationCode>
+            </packagingMarking>
+          </packaging_marking:packagingMarkingModule>
+          <product_information:productInformationModule xmlns:product_information="urn:gs1:gdsn:product_information:xsd:3">
+            <productInformationDetail>
+              <claimDetail><claimTypeCode>VEGAN</claimTypeCode></claimDetail>
+              <claimDetail><claimTypeCode>LOW</claimTypeCode><claimElementCode>CALORIE</claimElementCode></claimDetail>
+            </productInformationDetail>
+          </product_information:productInformationModule>
+          <referenced_file_detail_information:referencedFileDetailInformationModule xmlns:referenced_file_detail_information="urn:gs1:gdsn:referenced_file_detail_information:xsd:3">
+            <referencedFileHeader>
+              <referencedFileTypeCode>PRODUCT_IMAGE</referencedFileTypeCode>
+              <uniformResourceIdentifier>https://example.test/08711578582974_C1N1.tif</uniformResourceIdentifier>
+            </referencedFileHeader>
+          </referenced_file_detail_information:referencedFileDetailInformationModule>
+          <trade_item_description:tradeItemDescriptionModule xmlns:trade_item_description="urn:gs1:gdsn:trade_item_description:xsd:3">
+            <tradeItemDescriptionInformation>
+              <descriptionShort languageCode="de">Sojadrink 1L</descriptionShort>
+              <descriptionShort languageCode="nl">Sojadrank 1L</descriptionShort>
+              <regulatedProductName languageCode="nl">Sojadrank met suiker</regulatedProductName>
+              <brandNameInformation><brandName>Testmerk</brandName></brandNameInformation>
+            </tradeItemDescriptionInformation>
+          </trade_item_description:tradeItemDescriptionModule>
+          <trade_item_measurements:tradeItemMeasurementsModule xmlns:trade_item_measurements="urn:gs1:gdsn:trade_item_measurements:xsd:3">
+            <tradeItemMeasurements>
+              <netContent measurementUnitCode="MLT">1000</netContent>
+            </tradeItemMeasurements>
+          </trade_item_measurements:tradeItemMeasurementsModule>
+        </extension>
+      </tradeItemInformation>
+    </tradeItemProperties>
+    <tradeItemSynchronisationDates>
+      <lastChangeDateTime>2026-11-05T09:02:10+00:00</lastChangeDateTime>
+    </tradeItemSynchronisationDates>
+  </row>
+</rows>

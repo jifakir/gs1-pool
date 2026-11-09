@@ -43,22 +43,26 @@ export class ProductsRepository {
         'gs1_info.targetMarketCountryCode': doc.gs1_info.targetMarketCountryCode,
       };
 
+      // Pipeline updates treat strings starting with `$` and `$`-keys as expressions, and reject
+      // empty objects; `$literal` stores GS1 text and nested JSON exactly as given.
+      const literal = (value: unknown): { $literal: unknown } => ({ $literal: value });
       const $set: Record<string, unknown> = {
-        name: doc.name,
-        provider: doc.provider,
-        protien: doc.protien,
-        carbs: doc.carbs,
-        fat: doc.fat,
-        fiber: doc.fiber,
-        quantity: doc.quantity,
-        calories: doc.calories,
-        added_by: new ObjectId(doc.added_by),
-        gs1_info,
-        isDeleted: doc.isDeleted,
-        ingredients: doc.ingredients,
-        kenmerken: doc.kenmerken,
-        allergie_info: doc.allergie_info,
-        __v: doc.__v,
+        name: literal(doc.name),
+        provider: literal(doc.provider),
+        protien: literal(doc.protien),
+        carbs: literal(doc.carbs),
+        fat: literal(doc.fat),
+        fiber: literal(doc.fiber),
+        unit: literal(doc.unit),
+        quantity: literal(doc.quantity),
+        calories: literal(doc.calories),
+        added_by: literal(new ObjectId(doc.added_by)),
+        gs1_info: literal(gs1_info),
+        isDeleted: literal(doc.isDeleted),
+        ingredients: literal(doc.ingredients),
+        kenmerken: literal(doc.kenmerken),
+        allergie_info: literal(doc.allergie_info),
+        __v: literal(doc.__v),
         updatedAt: '$$NOW',
       };
 
